@@ -1,27 +1,25 @@
 <div align="center">
 
 <h1>
-  <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=700&size=28&pause=1000&color=E74C3C&center=true&vCenter=true&width=700&lines=Probabilistic+Attack+Regime+Detection;in+Network+Traffic;Using+Switching+State-Space+Models" alt="Typing SVG" />
+  <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=700&size=28&pause=1000&color=E74C3C&center=true&vCenter=true&width=700&lines=Probabilistic+Attack+Regime+Detection;in+Network+Traffic;Using+Switching+State-Space+Models" alt="Probabilistic Attack Regime Detection" />
 </h1>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Python-3.9+-3776AB?style=for-the-badge&logo=python&logoColor=white"/>
+  <img src="https://img.shields.io/badge/Python-3.9%2B-3776AB?style=for-the-badge&logo=python&logoColor=white"/>
   <img src="https://img.shields.io/badge/License-Apache_2.0-4CAF50?style=for-the-badge"/>
   <img src="https://img.shields.io/badge/Domain-Cybersecurity-E74C3C?style=for-the-badge&logo=shield&logoColor=white"/>
-  <img src="https://img.shields.io/badge/ML-State--Space_Models-8E44AD?style=for-the-badge"/>
-  <img src="https://img.shields.io/badge/Status-Active_Development-F39C12?style=for-the-badge"/>
+  <img src="https://img.shields.io/badge/Model-Switching_State--Space-8E44AD?style=for-the-badge"/>
+  <img src="https://img.shields.io/badge/Status-NeurIPS_Submission-F39C12?style=for-the-badge"/>
 </p>
 
 <p align="center">
-  <b>Early detection of multi-stage cyber attacks in network telemetry<br>
-  using probabilistic switching dynamical systems.</b>
+  <b>Probabilistic detection and inference of changing attack regimes in network traffic<br>
+  using switching state-space models.</b>
 </p>
 
 <br>
 
-![Regime Detection](docs/regime_detection.gif)
-
-<sub><i>Live inference — the model continuously tracks attack stage probabilities as network telemetry arrives, detecting threats before they fully manifest.</i></sub>
+<img src="docs/regime_detection.gif" alt="PARD-SSM regime detection visualization" width="850"/>
 
 </div>
 
@@ -29,185 +27,300 @@
 
 ## What is PARD-SSM?
 
-Most intrusion detection systems fire an alert **after** an attack is obvious — when thresholds are breached or signatures match. By then, significant damage may already be done.
+**PARD-SSM (Probabilistic Attack Regime Detection)** is a research project that models network traffic as a **latent dynamical system** whose underlying behavior can change between different regimes.
 
-**PARD-SSM takes a fundamentally different approach.** It models network traffic as a *hidden dynamical system* — one where the true network condition (normal, scanning, intrusion, exfiltration) is a latent variable that must be inferred from noisy, high-dimensional observations over time.
+Instead of treating network observations as independent samples, the project models temporal dependencies between observations and uses a **switching state-space model** to infer the hidden system state and regime.
 
-By continuously estimating the **probability of each attack stage**, the system can detect threats **before they fully manifest** — tracking the subtle statistical fingerprints of reconnaissance, privilege escalation, and lateral movement long before threshold-based systems would trigger.
+The implementation combines:
+
+* Probabilistic state-space modeling
+* Kalman filtering
+* Extended and Unscented Kalman filtering
+* Switching-state inference
+* Variational inference
+* EM-based parameter learning
+* Network-traffic feature processing
+* Statistical evaluation
+
+---
+
+## Research Objective
+
+The central problem is to infer hidden changes in network behavior from noisy and high-dimensional traffic observations.
+
+Let:
+
+* $x_t$ denote the continuous latent network state,
+* $s_t$ denote the discrete latent regime,
+* $y_t$ denote the observed network telemetry.
+
+The inference objective is:
+
+```text
+P(x_t, s_t | y_1:t)
+```
+
+which provides both:
+
+* an estimate of the hidden network state, and
+* a probability distribution over possible regimes.
+
+This formulation allows the system to study **how network behavior evolves over time**, rather than relying only on isolated classification decisions.
 
 ---
 
 ## Key Features
 
-- **Probabilistic regime tracking** — outputs a full probability distribution over attack stages at every time step, not just a binary alert
-- **Four inference engines** — Kalman Filter, EKF, UKF, and Variational Switching KF, from simple baselines to the full switching model
-- **Early detection** — tracks reconnaissance and intrusion phases before exfiltration begins
-- **EM learning** — transition probabilities and model parameters learned from data
-- **Benchmark evaluated** — tested on CICIDS2017 and UNSW-NB15, the two most widely used intrusion detection benchmarks
-- **Fully tested** — 20+ unit tests across models, inference, and data processing
-
----
-
-## Attack Regime Modeling
-
-Cyber attacks follow structured multi-stage progressions aligned with the **MITRE ATT&CK** framework:
-
-| # | Regime | Observable Signals |
-|---|--------|--------------------|
-| 0 | 🟢 **Normal Operation** | Stable flows, known protocols, predictable rates |
-| 1 | 🟡 **Reconnaissance** | Port sweeps, DNS enumeration, SYN floods |
-| 2 | 🔴 **Intrusion Attempts** | Auth failures, unusual service access |
-| 3 | 🟠 **Privilege Escalation** | Admin logins, policy changes, new accounts |
-| 4 | 🔵 **Lateral Movement** | Unexpected internal connection spikes |
-| 5 | 🟣 **Data Exfiltration** | Large outbound flows, unusual destinations |
-
-Rather than detecting isolated events, PARD-SSM models **attack progression as regime transitions in a continuous-time stochastic process** — catching the full kill chain, not just its endpoint.
+* **Probabilistic regime tracking** — estimates a distribution over latent regimes instead of producing only a single label.
+* **Multiple inference methods** — Kalman Filter, EKF, UKF, and Variational Switching inference.
+* **Switching dynamics** — allows the underlying system dynamics to vary across latent regimes.
+* **EM-based learning** — estimates model parameters and regime transition behavior from data.
+* **Multi-dataset evaluation** — experiments are conducted using CICIDS2017 and UNSW-NB15.
+* **Explainability support** — SHAP-based analysis is included for investigating feature contributions.
+* **Reproducible experiments** — experiment scripts, tests, documentation, and generated results are included in the repository.
 
 ---
 
 ## Mathematical Formulation
 
-The system is a **Switching State-Space Model (SSSM)** where both the continuous hidden network state and the discrete attack regime must be inferred simultaneously from observations.
+### State Dynamics
 
-### State Dynamics (Regime-Specific)
+The switching state-space formulation can be expressed as
 
+```text
+x_t = A_{s_t} x_{t-1} + w_t
 ```
-x_t = A_{s_t} · x_{t-1} + w_t        w_t ~ N(0, Q_{s_t})
+
+where
+
+```text
+w_t ~ N(0, Q_{s_t})
 ```
 
-Each attack regime `s_t` has its own transition matrix `A_{s_t}` — capturing how network state evolves differently during normal traffic vs. an active intrusion.
+and the transition dynamics depend on the latent regime $s_t$.
 
 ### Observation Model
 
-```
-y_t = C_{s_t} · x_t + v_t             v_t ~ N(0, R_{s_t})
-```
-
-The observed telemetry `y_t` (packet counts, flow stats, protocol ratios) is a noisy linear projection of the hidden state.
-
-### Regime Transition (Markov Chain)
-
-```
-P(s_t = j | s_{t-1} = i) = π_{ij}
+```text
+y_t = C_{s_t} x_t + v_t
 ```
 
-The transition matrix `Π` is **learned from data via EM** — capturing that attack stages persist over multiple time steps and escalate in structured patterns.
+where
 
-### Joint Inference Goal
-
+```text
+v_t ~ N(0, R_{s_t})
 ```
-P(x_t, s_t | y_{1:t})   →   regime probabilities + hidden state estimate
+
+The observed telemetry is therefore modeled as a noisy projection of the hidden system state.
+
+### Regime Dynamics
+
+The discrete regime follows a Markov transition model:
+
+```text
+P(s_t = j | s_{t-1} = i) = π_ij
+```
+
+The resulting inference problem is to jointly estimate:
+
+```text
+P(x_t, s_t | y_1:t)
 ```
 
 ---
 
 ## Model Architecture
 
-```
-Raw Network Telemetry  (PCAP / NetFlow / CICIDS CSV)
-              │
-              ▼
-    ┌─────────────────────┐
-    │  Feature Extraction  │   packet stats · flow metadata · protocol ratios
-    └──────────┬──────────┘
-               │  Normalize → PCA → Sliding Window
-               ▼
-    ┌─────────────────────────────────────────────┐
-    │          Switching State-Space Model         │
-    │                                             │
-    │   Hidden State   x_t  ∈ ℝᵈ                 │
-    │   Attack Regime  s_t  ∈ {0, 1, 2, 3, 4, 5} │
-    │   Transition     Π    (learned via EM)      │
-    └──────────────────┬──────────────────────────┘
-                       │
-             Inference Engine
-                       │
-         ┌─────────────┼──────────────┐
-         ▼             ▼              ▼
-    Kalman Filter    EKF / UKF    Variational
-    (linear SSM)   (nonlinear)   Switching KF
-                                      │
-                                      ▼
-                       Regime Probabilities P(s_t | y_{1:t})
-                                      │
-                                      ▼
-                         ⚠️  Early Attack Stage Detection
+```text
+Network Traffic
+      │
+      ▼
+Feature Extraction & Processing
+      │
+      ▼
+State-Space Representation
+      │
+      ▼
+┌──────────────────────────────────────┐
+│    Switching State-Space Model       │
+│                                      │
+│  Hidden State:   x_t ∈ R^d           │
+│  Regime:         s_t                 │
+│  Transition:     Π                   │
+└──────────────────┬───────────────────┘
+                   │
+                   ▼
+        ┌──────────────────────┐
+        │   Inference Engine   │
+        ├──────────────────────┤
+        │ Kalman Filter        │
+        │ EKF                  │
+        │ UKF                  │
+        │ Variational Switching│
+        └──────────┬───────────┘
+                   │
+                   ▼
+        Regime Probabilities
+        + Hidden State Estimates
 ```
 
 ---
 
 ## Inference Methods
 
-| Method | Model Type | Key Property | Complexity |
-|--------|-----------|--------------|------------|
-| **Kalman Filter (KF)** | Linear Gaussian | Exact posterior, fast baseline | Low |
-| **Extended KF (EKF)** | Nonlinear | Local Jacobian linearization | Medium |
-| **Unscented KF (UKF)** | Nonlinear | Sigma-point transform, no Jacobians needed | Medium-High |
-| **Variational Switching KF** | Full SSSM | GPB2 approximation + Viterbi + EM learning | High |
+| Method                              | Model           | Main Role                    |
+| ----------------------------------- | --------------- | ---------------------------- |
+| **Kalman Filter**                   | Linear Gaussian | Baseline state estimation    |
+| **Extended Kalman Filter**          | Nonlinear       | Local linearization          |
+| **Unscented Kalman Filter**         | Nonlinear       | Sigma-point inference        |
+| **Variational Switching Inference** | Switching SSM   | Joint regime/state inference |
 
-All methods output:
-- Filtered state estimate `x_{t|t}` and covariance `P_{t|t}`
-- Regime probability vector `P(s_t | y_{1:t})`
-- Viterbi-decoded most-likely attack path `s*_{1:T}`
-- Log-likelihood for model comparison
+---
+
+## Datasets
+
+### CICIDS2017
+
+Used for evaluating network intrusion-detection behavior across a range of traffic and attack scenarios.
+
+**Source:** [Canadian Institute for Cybersecurity](https://www.unb.ca/cic/datasets/ids-2017.html)
+
+### UNSW-NB15
+
+Used as a second benchmark for evaluating the robustness of the modeling approach across a different network-traffic distribution.
+
+**Source:** [UNSW Canberra Cyber](https://research.unsw.edu.au/projects/unsw-nb15-dataset)
+
+> Raw datasets are intentionally excluded from version control.
+> See [`docs/dataset_guide.md`](docs/dataset_guide.md) for dataset preparation instructions.
+
+---
+
+## Data Processing Pipeline
+
+```text
+Raw Dataset
+     │
+     ▼
+Dataset Loader
+     │
+     ▼
+Feature Engineering
+     │
+     ▼
+Normalization / Dimensionality Reduction
+     │
+     ▼
+Temporal Windows
+     │
+     ▼
+State-Space Inference
+```
+
+Implementation:
+
+```text
+src/data_processing/
+├── dataset_loader.py
+└── feature_engineering.py
+```
+
+---
+
+## Explainability
+
+The repository includes SHAP-based analysis for examining feature contributions to model outputs.
+
+Implementation:
+
+```text
+src/explainablity/shap_explainer.py
+```
+
+---
+
+## Experiments
+
+The `experiments/` directory contains:
+
+```text
+experiments/
+├── baselines.py
+├── run_baseline.py
+├── run_switching.py
+├── evaluation_metrics.py
+├── ablation_study.py
+└── statistical_significance.py
+```
+
+These scripts support:
+
+* Baseline comparisons
+* Switching-model experiments
+* Ablation studies
+* Evaluation metrics
+* Statistical significance analysis
+
+---
+
+## Results
+
+Generated experimental results are available in:
+
+```text
+results/
+```
+
+including:
+
+* Baseline comparisons
+* Ablation studies
+* Statistical significance analysis
+* Dataset-specific visualizations
+
+Representative visualizations are included in the repository and the project documentation.
 
 ---
 
 ## Repository Structure
 
-```
+```text
 PARD-SSM/
 │
-├── README.md
-├── LICENSE                             ← Apache 2.0
-├── requirements.txt
-├── .gitignore
-│
-├── data/
-│   ├── raw/                            ← Downloaded datasets (not tracked by git)
-│   └── processed/                      ← Preprocessed .npy arrays
-│
-├── src/
-│   ├── models/
-│   │   ├── linear_ssm.py               ← Linear Gaussian SSM (3 init strategies + simulate)
-│   │   ├── nonlinear_ssm.py            ← Nonlinear SSM (TANH / SIGMOID_DECAY / LOG_RATIO)
-│   │   └── switching_ssm.py            ← Full Switching SSM parameter container
-│   │
-│   ├── inference/
-│   │   ├── kalman_filter.py            ← KF + RTS smoother
-│   │   ├── ekf.py                      ← Extended Kalman Filter
-│   │   ├── ukf.py                      ← Unscented Kalman Filter (sigma points)
-│   │   └── variational_switching.py    ← Switching KF: GPB2 + Viterbi + EM
-│   │
-│   ├── data_processing/
-│   │   ├── dataset_loader.py           ← CICIDS2017 + UNSW-NB15 loaders
-│   │   └── feature_engineering.py     ← Normalize → PCA → Window pipeline
-│   │
-│   └── utils/
-│       ├── visualization.py            ← 5 plot types: regime probs, timeline, confusion
-│       └── metrics.py                  ← Accuracy, AUC-ROC, MSE, detection lead time
+├── docs/
+│   ├── dataset_guide.md
+│   ├── math_derivations.md
+│   └── regime_detection.gif
 │
 ├── experiments/
-│   ├── run_baseline.py                 ← KF / EKF / UKF side-by-side comparison
-│   ├── run_switching.py                ← Full SSSM end-to-end experiment
-│   └── evaluation_metrics.py          ← Unified comparison table across all methods
+│   ├── ablation_study.py
+│   ├── baselines.py
+│   ├── evaluation_metrics.py
+│   ├── run_baseline.py
+│   ├── run_switching.py
+│   └── statistical_significance.py
+│
+├── results/
+│   ├── ablation_*.png
+│   ├── baselines_*.png
+│   └── significance_*.png
+│
+├── src/
+│   ├── data_processing/
+│   ├── explainablity/
+│   ├── inference/
+│   ├── models/
+│   └── utils/
 │
 ├── tests/
-│   ├── test_kalman_filter.py           ← KF correctness, PD covariance, smoother
-│   ├── test_switching_ssm.py           ← Regime prob sums, Viterbi validity, EM LL
-│   └── test_data_processing.py        ← 14 tests: normalize, PCA, windows, save/load
+│   ├── test_data_processing.py
+│   ├── test_kalman_filter.py
+│   └── test_switching_ssm.py
 │
-├── notebooks/
-│   ├── 01_dataset_exploration.ipynb
-│   ├── 02_kalman_filter_demo.ipynb
-│   ├── 03_switching_ssm_demo.ipynb
-│   └── 04_regime_detection_results.ipynb
-│
-└── docs/
-    ├── regime_detection.gif            ← README animation (generated by make_gif.py)
-    ├── make_gif.py                     ← Script to regenerate the animation
-    ├── math_derivations.md             ← Full derivations: KF → RTS → GPB2 → Viterbi
-    └── dataset_guide.md                ← Download instructions + synthetic data fallback
+├── .gitignore
+├── LICENSE
+├── requirements.txt
+└── README.md
 ```
 
 ---
@@ -215,158 +328,72 @@ PARD-SSM/
 ## Installation
 
 ```bash
-# 1. Clone the repository
-git clone https://github.com/prakulhiremath/PARD-in-Network-Traffic-using-Switching-State-Space-Models-.git
-cd PARD-in-Network-Traffic-using-Switching-State-Space-Models-
-
-# 2. Create a virtual environment (recommended)
-python -m venv venv
-source venv/bin/activate          # Mac / Linux
-venv\Scripts\activate             # Windows
-
-# 3. Install dependencies
+git clone https://github.com/PeerAhammad/PARD-in-Network-Traffic-using-Switching-State-Space-Models.git
+cd PARD-in-Network-Traffic-using-Switching-State-Space-Models
 pip install -r requirements.txt
 ```
 
+For isolated development, create a virtual environment before installing dependencies.
+
 ---
 
-## Running the Pipeline
+## Running the Project
 
-### Quick start — no dataset download needed
-
-```python
-# generate_synthetic.py
-import numpy as np
-
-X = np.vstack([
-    np.random.randn(800, 10) * 0.5,           # Normal traffic
-    np.random.randn(600, 10) * 2.0 + 3.0,    # Scanning / attack
-    np.random.randn(600, 10) * 1.0 - 2.0,    # Exfiltration
-])
-y = np.array([0]*800 + [1]*600 + [2]*600)
-
-np.save("data/processed/synthetic_features.npy", X)
-np.save("data/processed/synthetic_labels.npy",   y)
-```
+### Baseline experiments
 
 ```bash
-python experiments/run_switching.py \
-    --data   data/processed/synthetic_features.npy \
-    --labels data/processed/synthetic_labels.npy   \
-    --regimes 3
+python experiments/run_baseline.py
 ```
 
-### Full pipeline on CICIDS2017
+### Switching-state experiments
 
 ```bash
-# Step 1 — Preprocess raw dataset
-python src/data_processing/dataset_loader.py \
-    --dataset cicids2017 \
-    --input   data/raw/cicids2017/ \
-    --output  data/processed/
-
-# Step 2 — Run baseline filters (KF / EKF / UKF)
-python experiments/run_baseline.py \
-    --data   data/processed/cicids2017_features.npy \
-    --labels data/processed/cicids2017_labels.npy
-
-# Step 3 — Run full Switching SSM
-python experiments/run_switching.py \
-    --data     data/processed/cicids2017_features.npy \
-    --labels   data/processed/cicids2017_labels.npy   \
-    --regimes  4   \
-    --em-iters 20
-
-# Step 4 — Compare all methods
-python experiments/evaluation_metrics.py
+python experiments/run_switching.py
 ```
 
-### Run all tests
+### Statistical evaluation
 
 ```bash
-python tests/test_kalman_filter.py
-python tests/test_switching_ssm.py
-python tests/test_data_processing.py
+python experiments/statistical_significance.py
 ```
 
----
+### Tests
 
-## Datasets
+```bash
+pytest tests/
+```
 
-### CICIDS 2017
-- **Source:** [Canadian Institute for Cybersecurity](https://www.unb.ca/cic/datasets/ids-2017.html)
-- **Size:** ~1.2 GB — 8 CSV files, one per day of a simulated work week
-- **Attacks:** Brute Force, DoS/DDoS, Infiltration, Port Scan, Botnet, Web Attacks
-- **Features:** 78 flow-level features extracted by CICFlowMeter
+For dataset preparation and experiment details, see:
 
-### UNSW-NB15
-- **Source:** [UNSW Canberra Cyber](https://research.unsw.edu.au/projects/unsw-nb15-dataset)
-- **Size:** ~100 MB — 4 CSV files, ~2.5 million records
-- **Attacks:** Reconnaissance, Backdoors, DoS, Exploits, Shellcode, Worms — 9 categories
-- **Features:** 49 features including packet stats, flow metadata, and protocol behavior
-
-> See `docs/dataset_guide.md` for full download steps and preprocessing commands.
+* [`docs/dataset_guide.md`](docs/dataset_guide.md)
+* [`docs/math_derivations.md`](docs/math_derivations.md)
 
 ---
 
-## Evaluation Metrics
+## Evaluation
 
-| Metric | Description |
-|--------|-------------|
-| **Regime Accuracy** | Classification accuracy of Viterbi-decoded path vs ground truth labels |
-| **Prediction MSE** | Mean squared error of one-step-ahead telemetry prediction |
-| **Log-Likelihood** | Model fit on held-out data — higher is better |
-| **AUC-ROC** | Attack vs. normal discrimination (all attack regimes pooled as positive class) |
-| **Detection Lead Time** | How many time steps early the model flags an incoming attack |
-| **Confusion Matrix** | Per-regime precision/recall breakdown |
+The project evaluates the inference methods using metrics including:
 
----
-
-## Results
-
-> Results will be populated as experiments complete on CICIDS2017 and UNSW-NB15.
-
-| Method | Regime Accuracy | AUC-ROC | Detection Lead Time | Log-Likelihood |
-|--------|:--------------:|:-------:|:-------------------:|:--------------:|
-| Kalman Filter (baseline) | — | — | — | — |
-| Extended KF | — | — | — | — |
-| Unscented KF | — | — | — | — |
-| **Variational Switching SSM** | — | — | — | — |
+| Metric              | Purpose                                    |
+| ------------------- | ------------------------------------------ |
+| Regime Accuracy     | Evaluate inferred regime labels            |
+| Prediction MSE      | Measure state/observation prediction error |
+| Log-Likelihood      | Compare probabilistic model fit            |
+| AUC-ROC             | Evaluate attack-vs-normal discrimination   |
+| Detection Lead Time | Analyze temporal detection behavior        |
+| Confusion Matrix    | Inspect per-regime performance             |
 
 ---
 
-## Future Work — Phase II
+## Project Status
 
-- [ ] Real-time streaming inference for live network monitoring
-- [ ] Integration with SIEM platforms (Splunk, Elastic Security)
-- [ ] Deep Kalman Filter — neural network state-space hybrid models
-- [ ] Unsupervised regime discovery — no attack labels required
-- [ ] Interactive visualization dashboard (Plotly Dash / Streamlit)
-- [ ] Deployment on enterprise-scale network telemetry
+**Research project — submitted to NeurIPS and awaiting final decision.**
 
----
-
-## Team
-
-<div align="center">
-
-| Name | USN | Contribution |
-|------|-----|--------------|
-| **Prakul Sunil Hiremath** | 2VX23CS013 | Lead — Inference engines & core models |
-| **Peerahamad Bagawan** | 2VX23CS029 | Data processing & evaluation pipeline |
-| **Sahil Bekane** | 2VX23CS042 | Experiments, testing & benchmarking |
-| **Hemanth B. K.** | 2VX23CS012 | Visualization & documentation |
-
-**Institution:** Visvesvaraya Technological University, Belagavi , Karnataka, India
-**Programme:** B. Tech. Computer Science & Engineering — Major Project 2026–27
-
-</div>
+The repository contains the implementation, experiments, evaluation procedures, results, tests, and supporting mathematical documentation for the PARD-SSM research project.
 
 ---
 
 ## Citation
-
-If you use this work in your research, please cite our preprint:
 
 ```bibtex
 @article{hiremath2026pard,
@@ -377,35 +404,17 @@ If you use this work in your research, please cite our preprint:
 }
 ```
 
----
-
-## References
-
-- Ghahramani, Z. & Hinton, G.E. (1996). *Switching State-Space Models.* University of Toronto.
-- Murphy, K.P. (1998). *Switching Kalman Filters.* UC Berkeley Technical Report.
-- Shumway, R.H. & Stoffer, D.S. *Time Series Analysis and Its Applications.* Springer.
-- MITRE Corporation. *ATT&CK® Framework for Enterprise.* https://attack.mitre.org
-- Sharafaldin, I. et al. (2018). *Toward Generating a New Intrusion Detection Dataset.* ICISSP.
-- Moustafa, N. & Slay, J. (2015). *UNSW-NB15: A Comprehensive Dataset.* MilCIS.
-
----
 
 ## License
 
-Copyright 2026 Prakul Sunil Hiremath, Peerahamad Bagawan, Sahil Bekane, Hemanth B. K.
+This project is licensed under the **Apache License 2.0**.
 
-Licensed under the **Apache License, Version 2.0** — see [LICENSE](LICENSE) for full terms.
-
-```
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-```
+See [`LICENSE`](LICENSE) for the full license text.
 
 ---
 
 <div align="center">
-<sub>Built with 🔬 for early cyber-attack detection &nbsp;·&nbsp; VTU Karnataka &nbsp;·&nbsp; 2026</sub>
+
+**Research → Model → Infer → Evaluate → Understand**
+
 </div>
